@@ -240,14 +240,14 @@ struct RegistryMixin
 
     Derived* registry = mrb_registry->get();
 
-    std::unordered_map< std::string, std::string > ctrl_map;
+    using userdata_type = std::unordered_map< std::string, std::string >;
+    userdata_type ctrl_map;
 
     mrb_hash_foreach_func* fn = [](mrb_state* mrb, mrb_value key, mrb_value value, void* ud) -> int
     {
-      auto& ctrl_map = *(std::unordered_map< std::string, std::string >*)ud;
-      std::string key_, value_;
-      key_ = mrb_string_value_cstr(mrb, &key);
-      value_ = mrb_string_value_cstr(mrb, &value);
+      userdata_type& ctrl_map = *(userdata_type*)ud;
+      std::string key_ = mrb_string_value_cstr(mrb, &key);
+      std::string value_ = mrb_string_value_cstr(mrb, &value);
       ctrl_map[key_] = value_;
       return 0;
     };
