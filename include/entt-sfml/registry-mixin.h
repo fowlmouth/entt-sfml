@@ -221,7 +221,8 @@ struct RegistryMixin
     if(mrb_get_args(mrb, "ii", &width, &height) != 2)
       return mrb_nil_value();
 
-    window->setSize(width, height);
+    sf::Vector2u new_size(width, height);
+    window->setSize(new_size);
     return mrb_true_value();
   }
 
