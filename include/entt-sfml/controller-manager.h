@@ -79,7 +79,7 @@ namespace UI
       auto& ctrl = iter->second;
       ctrl->entity = entity;
 
-      r.get_or_assign< UI::Controller >(entity).controller = ctrl;
+      r.get_or_emplace< UI::Controller >(entity).controller = ctrl;
 
       return true;
     }
