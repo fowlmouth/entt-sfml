@@ -102,14 +102,11 @@ struct RegistryMixin
     mrb_int args_read = mrb_get_args(mrb, "z&", &control, &block);
     if(args_read != 1 || mrb_nil_p(block))
       return mrb_nil_value();
-    
-    // auto mrb_registry = (MRubyRegistryMixin::MRubyRegistryPtr*)DATA_PTR(self);
-    auto mrb_registry = (MRubyRegistryPtr*)(DATA_PTR(self));
-    if(!mrb_registry || !mrb_registry->get())
-      return mrb_nil_value();
-
-    Derived* registry = mrb_registry->get();
     std::string control_str(control);
+    
+    Derived* registry = Derived::mrb_value_to_registry(mrb, self);
+    if(!registry)
+      return mrb_nil_value();
 
     auto& handlers = registry->ui_mrb_controller_handlers;
     auto iter = handlers.find(control_str);
@@ -132,13 +129,11 @@ struct RegistryMixin
     mrb_int entity;
     if(mrb_get_args(mrb, "iz", &entity, &controller_name) != 2)
       return mrb_nil_value();
-
-    auto mrb_registry = (MRubyRegistryPtr*)(DATA_PTR(self));
-    if(!mrb_registry || !mrb_registry->get() || !mrb_registry->get()->valid((entt::entity)entity))
-      return mrb_nil_value();
-
-    Derived* registry = mrb_registry->get();
     std::string controller(controller_name);
+
+    Derived* registry = Derived::mrb_value_to_registry(mrb, self);
+    if(!registry)
+      return mrb_nil_value();
 
     auto& controller_man = registry->ui_controller_manager();
     if(controller_man.take_controller(controller, *registry, (entt::entity)entity))
@@ -148,11 +143,9 @@ struct RegistryMixin
 
   static mrb_value ui_mrb_registry_controllers(mrb_state* mrb, mrb_value self)
   {
-    auto mrb_registry = (MRubyRegistryPtr*)(DATA_PTR(self));
-    if(!mrb_registry || !mrb_registry->get()) // || !mrb_registry->get()->valid((entt::entity)entity))
+    Derived* registry = Derived::mrb_value_to_registry(mrb, self);
+    if(!registry)
       return mrb_nil_value();
-
-    Derived* registry = mrb_registry->get();
     auto& controller_manager = registry->ui_controller_manager();
 
     std::size_t num_controllers = controller_manager.controllers.size();
@@ -170,11 +163,9 @@ struct RegistryMixin
 
   static mrb_value ui_mrb_registry_close_window(mrb_state* mrb, mrb_value self)
   {
-    auto mrb_registry = (MRubyRegistryPtr*)(DATA_PTR(self));
-    if(!mrb_registry || !mrb_registry->get()) // || !mrb_registry->get()->valid((entt::entity)entity))
+    Derived* registry = Derived::mrb_value_to_registry(mrb, self);
+    if(!registry)
       return mrb_nil_value();
-
-    Derived* registry = mrb_registry->get();
 
     auto window = registry->ui_render_window();
     if(!window)
@@ -186,11 +177,9 @@ struct RegistryMixin
 
   static mrb_value ui_mrb_registry_window_size(mrb_state* mrb, mrb_value self)
   {
-    auto mrb_registry = (MRubyRegistryPtr*)(DATA_PTR(self));
-    if(!mrb_registry || !mrb_registry->get()) // || !mrb_registry->get()->valid((entt::entity)entity))
+    Derived* registry = Derived::mrb_value_to_registry(mrb, self);
+    if(!registry)
       return mrb_nil_value();
-
-    Derived* registry = mrb_registry->get();
 
     auto window = registry->ui_render_window();
     if(!window)
@@ -207,11 +196,9 @@ struct RegistryMixin
 
   static mrb_value ui_mrb_registry_set_window_size(mrb_state* mrb, mrb_value self)
   {
-    auto mrb_registry = (MRubyRegistryPtr*)(DATA_PTR(self));
-    if(!mrb_registry || !mrb_registry->get()) // || !mrb_registry->get()->valid((entt::entity)entity))
+    Derived* registry = Derived::mrb_value_to_registry(mrb, self);
+    if(!registry)
       return mrb_nil_value();
-
-    Derived* registry = mrb_registry->get();
 
     auto window = registry->ui_render_window();
     if(!window)
@@ -234,11 +221,9 @@ struct RegistryMixin
     if(mrb_get_args(mrb, "zzH", &ctrl_name, &ctrl_type, &ctrl_keys) != 3)
       return mrb_nil_value();
 
-    auto mrb_registry = (MRubyRegistryPtr*)(DATA_PTR(self));
-    if(!mrb_registry || !mrb_registry->get()) // || !mrb_registry->get()->valid((entt::entity)entity))
+    Derived* registry = Derived::mrb_value_to_registry(mrb, self);
+    if(!registry)
       return mrb_nil_value();
-
-    Derived* registry = mrb_registry->get();
 
     using userdata_type = std::unordered_map< std::string, std::string >;
     userdata_type ctrl_map;
@@ -297,7 +282,7 @@ struct RegistryMixin
         .define_method("set_controller_callback", ui_mrb_registry_set_controller_callback, MRB_ARGS_REQ(1) | MRB_ARGS_BLOCK())
         .define_method("take_controller", ui_mrb_registry_take_controller, MRB_ARGS_REQ(2))
         .define_method("controllers", ui_mrb_registry_controllers, MRB_ARGS_REQ(0))
-        .define_method("create_controller", ui_mrb_registry_create_controller, MRB_ARGS_REQ(0))
+        .define_method("create_controller", ui_mrb_registry_create_controller, MRB_ARGS_REQ(3))
         .define_method("close_window", ui_mrb_registry_close_window, MRB_ARGS_REQ(0))
         .define_method("window_size", ui_mrb_registry_window_size, MRB_ARGS_REQ(0))
         .define_method("set_window_size", ui_mrb_registry_set_window_size, MRB_ARGS_REQ(2))

@@ -4,7 +4,7 @@
 
 struct Transform
 {
-  float x,y;
+  float x,y, radians;
 };
 
 struct Velocity
@@ -33,6 +33,10 @@ inline float randf(float min, float max)
 {
   return (float)rand() / (float)RAND_MAX * (max - min) + min;
 }
+inline int randi(int min, int max)
+{
+  return (int)((float)rand() / (float)RAND_MAX * (max - min) + min);
+}
 
 auto create_a_shape(entt::registry& registry, int w, int h)
 {
@@ -41,13 +45,25 @@ auto create_a_shape(entt::registry& registry, int w, int h)
   auto& transform = registry.assign< Transform >(entity);
   transform.x = randf(0, w);
   transform.y = randf(0, h);
+  transform.radians = randf(0, M_PI * 2);
 
   auto& velocity = registry.assign< Velocity >(entity);
-  velocity.x = randf(-5, 5);
-  velocity.y = randf(-5, 5);
+  velocity.x = randf(-50, 50);
+  velocity.y = randf(-50, 50);
 
   auto& shape = registry.assign< Shape >(entity);
-  shape.shape = std::make_unique< sf::CircleShape >(randf(5, 25));
+  if(randf(0.0, 1.0) < 0.5)
+    shape.shape = std::make_unique< sf::CircleShape >(randf(5, 25));
+  else
+  {
+    sf::Vector2f size( randf(5, 25), randf(15, 30) );
+    shape.shape = std::make_unique< sf::RectangleShape >(size);
+  }
+
+  static sf::Color colors[4] = {
+    sf::Color::Red, sf::Color::Green, sf::Color::Blue, sf::Color::Yellow
+  };
+  shape.shape->setFillColor(colors[ randi(0, 3) ]);
 
   return entity;
 }
@@ -93,20 +109,22 @@ int main()
       time_now - last_tick );
     last_tick = time_now;
 
+    float time_delta_float = time_delta.count() / 1000.0;
+
     registry.view< Transform, Velocity >().each(
       [&](auto entity, auto& transform, auto& velocity)
       {
-        transform.x += velocity.x;
-        transform.y += velocity.y;
+        transform.x += velocity.x * time_delta_float;
+        transform.y += velocity.y * time_delta_float;
         if(transform.x < 0 || transform.x > w)
         {
           velocity.x *= -1;
-          transform.x += velocity.x * 2;
+          transform.x += velocity.x * 2 * time_delta_float;
         }
         if(transform.y < 0 || transform.y > h)
         {
           velocity.y *= -1;
-          transform.y += velocity.y * 2;
+          transform.y += velocity.y * 2 * time_delta_float;
         }
       }
     );
@@ -115,7 +133,7 @@ int main()
       [&](auto entity, auto& transform, auto& shape)
       {
         shape.shape->setPosition(transform.x, transform.y);
-        // shape.shape->setRotation(transform.radians * 180 / M_PI);
+        shape.shape->setRotation(transform.radians * 180 / M_PI);
         registry.ctx< entt::dispatcher >()
           .enqueue(UI::RenderDrawableEvent{ shape.shape.get() });
       }
