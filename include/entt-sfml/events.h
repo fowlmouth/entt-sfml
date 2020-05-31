@@ -1,5 +1,9 @@
 #pragma once
 
+#include <memory>
+#include <chrono>
+#include <string>
+
 namespace UI
 {
 
@@ -13,7 +17,7 @@ namespace UI
 
   struct RenderDrawableEvent
   {
-    sf::Drawable* drawable;
+    std::unique_ptr< sf::Drawable > drawable;
   };
 
 }

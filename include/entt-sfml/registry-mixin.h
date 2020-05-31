@@ -8,6 +8,7 @@
 #ifdef FOWL_ENTT_MRUBY
 # include <mruby/proc.h>
 # include <mruby/hash.h>
+# include "mruby-bindings.h"
 #endif
 
 namespace UI
@@ -75,6 +76,7 @@ struct RegistryMixin
 
     if(! derived().template try_ctx< entt::dispatcher >())
       derived().template set< entt::dispatcher >();
+    
     derived().template ctx< entt::dispatcher >()
       .template sink< RenderDrawableEvent >()
       .template connect< &Self::ui_render_drawable >(this);
@@ -90,8 +92,6 @@ struct RegistryMixin
 #ifdef FOWL_ENTT_MRUBY
 
   using MRubyRegistryMixin = MRuby::RegistryMixin< Derived >;
-  using MRubyRegistryPtr = typename MRubyRegistryMixin::MRubyRegistryPtr;
-  // using MRubyWindowPtr = MRuby::WeakPointer< sf::RenderWindow >;
 
   std::unordered_map< std::string, RProc* > ui_mrb_controller_handlers;
 
@@ -253,6 +253,97 @@ struct RegistryMixin
     return mrb_str_new_cstr(mrb, ctrl_name);
   }
 
+  static mrb_value ui_mrb_draw(mrb_state* mrb, mrb_value self)
+  {
+    mrb_value hash;
+    if(mrb_get_args(mrb, "H", &hash) != 1)
+      return mrb_nil_value();
+
+    Derived* registry = Derived::mrb_value_to_registry(mrb, self);
+    if(!registry)
+      return mrb_nil_value();
+
+    auto& dispatcher = registry->template ctx< entt::dispatcher >();
+
+    std::string str;
+    sf::Vector2f vfval;
+    sf::Color cval;
+    float fval;
+    MRuby::HashReader reader(mrb, hash);
+
+    auto set_styles = [&](auto& resource){
+      if(reader.read_hash("outline_color", cval))
+        resource.setOutlineColor(cval);
+      if(reader.read_hash("outline_thickness", fval))
+        resource.setOutlineThickness(fval);
+      if(reader.read_hash("fill_color", cval))
+        resource.setFillColor(cval);
+      if(reader.read_hash("origin", vfval))
+        resource.setOrigin(vfval);
+      if(reader.read_hash("scale", vfval))
+        resource.setScale(vfval);
+      if(reader.read_hash("x", fval))
+        resource.setPosition(fval, resource.getPosition().y);
+      if(reader.read_hash("y", fval))
+        resource.setPosition(resource.getPosition().x, fval);
+    };
+
+    if(reader.read_hash("shape", str))
+    {
+      std::unique_ptr< sf::Shape > shape;
+      if(str == "circle")
+        shape = std::make_unique< sf::CircleShape >(
+          reader.read_default("radius", 5.f));
+      else if(str == "rect")
+        shape = std::make_unique< sf::RectangleShape >(sf::Vector2f(
+          reader.read_default("width", 10.f),
+          reader.read_default("height", 5.f)));
+      else
+        return mrb_nil_value();
+
+      set_styles(*shape);
+      // if(reader.read_hash("outline_color", cval))
+      //   shape->setOutlineColor(cval);
+      // if(reader.read_hash("outline_thickness", fval))
+      //   shape->setOutlineThickness(fval);
+      // if(reader.read_hash("fill_color", cval))
+      //   shape->setFillColor(cval);
+      // if(reader.read_hash("origin", vfval))
+      //   shape->setOrigin(vfval);
+      // if(reader.read_hash("scale", vfval))
+      //   shape->setScale(vfval);
+      // if(reader.read_hash("x", fval))
+      //   shape->setPosition(fval, shape->getPosition().y);
+      // if(reader.read_hash("y", fval))
+      //   shape->setPosition(shape->getPosition().x, fval);
+
+      dispatcher.template enqueue< UI::RenderDrawableEvent >({ std::move(shape) });
+      return reader.self;
+    }
+    if(reader.read_hash("text", str))
+    {
+      std::unique_ptr< sf::Text > text = std::make_unique< sf::Text >();
+      text->setString(str);
+
+      if(reader.read_hash("font", str))
+      {
+        auto font = registry->template ctx< UI::FontCache >().get(str);
+        if(font)
+          text->setFont(*font);
+        else
+          std::cout << "Unknown font " << str << std::endl;
+      }
+      if(reader.read_hash("size", fval))
+        text->setCharacterSize(fval);
+
+      set_styles(*text);
+      dispatcher.template enqueue< UI::RenderDrawableEvent >({ std::move(text) });
+      return reader.self;
+    }
+
+    return mrb_nil_value();
+  }
+
   void ui_mrb_handle_controller_input_event(const ControllerInputEvent& event)
   {
     // Handle ControllerInputEvent event
@@ -286,6 +377,7 @@ struct RegistryMixin
         .define_method("close_window", ui_mrb_registry_close_window, MRB_ARGS_REQ(0))
         .define_method("window_size", ui_mrb_registry_window_size, MRB_ARGS_REQ(0))
         .define_method("set_window_size", ui_mrb_registry_set_window_size, MRB_ARGS_REQ(2))
+        .define_method("draw", ui_mrb_draw, MRB_ARGS_REQ(1))
       ;
 
       auto& dispatcher = derived().template ctx< entt::dispatcher >();
