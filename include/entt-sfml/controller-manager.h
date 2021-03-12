@@ -49,7 +49,14 @@ namespace UI
 
   struct ControllerManager
   {
-    std::unordered_map< std::string, std::shared_ptr< UI::Controllers::Controller >> controllers;
+    using ControllerReference = std::shared_ptr< UI::Controllers::Controller >;
+
+    std::unordered_map< std::string, ControllerReference > controllers;
+
+    void add_controller(const std::string& name, const ControllerReference& controller)
+    {
+      controllers[name] = controller;
+    }
     
     void update(entt::registry& r, std::chrono::milliseconds dt)
     {

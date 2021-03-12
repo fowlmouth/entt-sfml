@@ -3,6 +3,7 @@
 #include "asset-cache.h"
 #include "controller-manager.h"
 #include "controllers/keyboard.h"
+#include "controllers/mouse.h"
 #include "events.h"
 
 #ifdef FOWL_ENTT_MRUBY
@@ -353,7 +354,7 @@ struct RegistryMixin
 
     auto proc = iter->second;
 
-    mrb_state* mrb = derived().mrb;
+    mrb_state* mrb = derived().template ctx< mrb_state* >();
 
     mrb_value argv[2]{
       mrb_gv_get(mrb, mrb_intern_lit(mrb, "$registry")),

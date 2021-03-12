@@ -12,6 +12,7 @@ struct Controller
 {
   std::string name;
   entt::entity entity = entt::null;
+  unsigned joystick_id = 0;
 
   virtual ~Controller()
   {
